@@ -142,7 +142,11 @@ class VectorStoreService:
             if results["ids"] and results["ids"][0]:
                 for i, doc_id in enumerate(results["ids"][0]):
                     distance = results["distances"][0][i] if results["distances"] else 0
-                    similarity = 1 - distance  # 余弦距离转相似度
+                    # ChromaDB 余弦距离范围 [0, 2]，转换为相似度 [-1, 1]
+                    similarity = 1 - distance
+                    # 如果相似度为负，说明距离>1，使用原始距离的相反数
+                    if similarity < 0:
+                        similarity = -distance
                     
                     formatted.append({
                         "content": results["documents"][0][i],

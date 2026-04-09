@@ -62,6 +62,11 @@ async def chat_stream(request: ChatRequest):
                 history=[{"role": m.role, "content": m.content} for m in request.messages]
             )
             
+            # 调试：打印消息
+            print(f"LLM Messages: {len(messages)} 条")
+            for msg in messages:
+                print(f"  - {msg['role']}: {msg['content'][:100]}...")
+            
             # 3. 流式调用 LLM
             async for chunk in llm_service.stream_chat(messages):
                 delta_data = ChatStreamChunk(
