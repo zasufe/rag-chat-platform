@@ -1,7 +1,11 @@
 """配置管理模块"""
+import os
 from pydantic_settings import BaseSettings
 from typing import Optional
 from functools import lru_cache
+
+# 获取项目根目录（backend 的父目录）
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class Settings(BaseSettings):
@@ -27,11 +31,11 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "text-embedding-v3"
     EMBEDDING_DIM: int = 1024
     
-    # 向量数据库配置
-    CHROMA_PERSIST_DIR: str = "./storage/chroma"
+    # 向量数据库配置（使用绝对路径）
+    CHROMA_PERSIST_DIR: str = os.path.join(BASE_DIR, "storage/chroma")
     
-    # 文件存储
-    STORAGE_DIR: str = "./storage/files"
+    # 文件存储（使用绝对路径）
+    STORAGE_DIR: str = os.path.join(BASE_DIR, "storage/files")
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
     ALLOWED_EXTENSIONS: set = {".pdf", ".docx", ".doc", ".txt", ".md"}
     
