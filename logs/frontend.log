@@ -1,0 +1,12 @@
+
+> rag-chat-frontend@2.0.0 dev
+> vite
+
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+  VITE v5.4.21  ready in 472 ms
+
+  ➜  Local:   http://localhost:3001/
+  ➜  Network: http://172.16.25.187:3001/
+  ➜  Network: http://172.18.0.1:3001/
+15:31:49 [vite] hmr update /src/views/ChatView.vue, /src/views/KnowledgeBase/ListView.vue, /src/views/KnowledgeBase/DetailView.vue, /src/views/KnowledgeBase/components/SearchTest.vue, /src/views/KnowledgeBase/components/DocManagement.vue

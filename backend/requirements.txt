@@ -1,0 +1,27 @@
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+aiofiles==23.2.1
+
+# Vector Database
+chromadb==0.4.22
+
+# Document Parsing
+PyPDF2==3.0.1
+python-docx==1.1.0
+unstructured==0.11.8
+
+# LLM & Embedding
+openai==1.10.0
+httpx==0.26.0
+
+# Utils
+pydantic==2.5.3
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+python-jose[cryptography]==3.3.0
+loguru==0.7.2
+
+# Async
+aiohttp==3.9.1

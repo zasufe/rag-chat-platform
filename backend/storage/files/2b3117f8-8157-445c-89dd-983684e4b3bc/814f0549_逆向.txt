@@ -1,0 +1,384 @@
+
+int _init(EVP_PKEY_CTX *ctx)
+
+{
+  int iVar1;
+  
+  __gmon_start__();
+  frame_dummy();
+  iVar1 = __do_global_ctors_aux();
+  return iVar1;
+}
+
+
+
+void FUN_08048490(void)
+
+{
+                    // WARNING: Treating indirect jump as call
+  (*(code *)(undefined *)0x0)();
+  return;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+char * strstr(char *__haystack,char *__needle)
+
+{
+  char *pcVar1;
+  
+  pcVar1 = strstr(__haystack,__needle);
+  return pcVar1;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+int printf(char *__format,...)
+
+{
+  int iVar1;
+  
+  iVar1 = printf(__format);
+  return iVar1;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+char * fgets(char *__s,int __n,FILE *__stream)
+
+{
+  char *pcVar1;
+  
+  pcVar1 = fgets(__s,__n,__stream);
+  return pcVar1;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+int fclose(FILE *__stream)
+
+{
+  int iVar1;
+  
+  iVar1 = fclose(__stream);
+  return iVar1;
+}
+
+
+
+void __stack_chk_fail(void)
+
+{
+                    // WARNING: Subroutine does not return
+  __stack_chk_fail();
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+int fseek(FILE *__stream,long __off,int __whence)
+
+{
+  int iVar1;
+  
+  iVar1 = fseek(__stream,__off,__whence);
+  return iVar1;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+size_t fwrite(void *__ptr,size_t __size,size_t __n,FILE *__s)
+
+{
+  size_t sVar1;
+  
+  sVar1 = fwrite(__ptr,__size,__n,__s);
+  return sVar1;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+int puts(char *__s)
+
+{
+  int iVar1;
+  
+  iVar1 = puts(__s);
+  return iVar1;
+}
+
+
+
+void __gmon_start__(void)
+
+{
+  __gmon_start__();
+  return;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+__off_t ftello(FILE *__stream)
+
+{
+  __off_t _Var1;
+  
+  _Var1 = ftello(__stream);
+  return _Var1;
+}
+
+
+
+void __libc_start_main(void)
+
+{
+  __libc_start_main();
+  return;
+}
+
+
+
+void __isoc99_sscanf(void)
+
+{
+  __isoc99_sscanf();
+  return;
+}
+
+
+
+// WARNING: Unknown calling convention yet parameter storage is locked
+
+FILE * fopen(char *__filename,char *__modes)
+
+{
+  FILE *pFVar1;
+  
+  pFVar1 = fopen(__filename,__modes);
+  return pFVar1;
+}
+
+
+
+void _start(void)
+
+{
+  __libc_start_main(main);
+  do {
+                    // WARNING: Do nothing block with infinite loop
+  } while( true );
+}
+
+
+
+// WARNING: Removing unreachable block (ram,0x080485ca)
+// WARNING: Removing unreachable block (ram,0x080485d0)
+
+void __do_global_dtors_aux(void)
+
+{
+  if (completed_6159 == '\0') {
+    completed_6159 = '\x01';
+  }
+  return;
+}
+
+
+
+// WARNING: Removing unreachable block (ram,0x08048618)
+
+void frame_dummy(void)
+
+{
+  return;
+}
+
+
+
+char * FillMd5Code(char *param_1,char *param_2)
+
+{
+  char cVar1;
+  FILE *__stream;
+  char *pcVar2;
+  __off_t _Var3;
+  uint uVar4;
+  int iVar5;
+  int in_GS_OFFSET;
+  byte bVar6;
+  char local_74 [100];
+  int local_10;
+  
+  bVar6 = 0;
+  local_10 = *(int *)(in_GS_OFFSET + 0x14);
+  __stream = fopen("update.ini","r+");
+  if (__stream == (FILE *)0x0) {
+    puts("update.ini not exist!");
+    pcVar2 = (char *)0xffffffff;
+  }
+  else {
+    do {
+      pcVar2 = fgets(local_74,100,__stream);
+      if (pcVar2 == (char *)0x0) goto LAB_080487b1;
+      pcVar2 = strstr(local_74,param_1);
+    } while (pcVar2 == (char *)0x0);
+    do {
+      iVar5 = -1;
+      pcVar2 = param_2;
+      do {
+        if (iVar5 == 0) break;
+        iVar5 = iVar5 + -1;
+        cVar1 = *pcVar2;
+        pcVar2 = pcVar2 + (uint)bVar6 * -2 + 1;
+      } while (cVar1 != '\0');
+      if (iVar5 != -0x22) goto LAB_080487a1;
+      fgets(local_74,100,__stream);
+      pcVar2 = strstr(local_74,"Md5_Code=");
+    } while (pcVar2 == (char *)0x0);
+    _Var3 = ftello(__stream);
+    fseek(__stream,_Var3 + -0x21,0);
+    uVar4 = 0xffffffff;
+    pcVar2 = param_2;
+    do {
+      if (uVar4 == 0) break;
+      uVar4 = uVar4 - 1;
+      cVar1 = *pcVar2;
+      pcVar2 = pcVar2 + (uint)bVar6 * -2 + 1;
+    } while (cVar1 != '\0');
+    fwrite(param_2,~uVar4 - 1,1,__stream);
+LAB_080487a1:
+    fclose(__stream);
+    pcVar2 = (char *)0x0;
+  }
+LAB_080487b1:
+  if (local_10 == *(int *)(in_GS_OFFSET + 0x14)) {
+    return pcVar2;
+  }
+                    // WARNING: Subroutine does not return
+  __stack_chk_fail();
+}
+
+
+
+void SetUpdateItemsMd5(void)
+
+{
+  FILE *__stream;
+  char *pcVar1;
+  int iVar2;
+  int in_GS_OFFSET;
+  char local_a4 [100];
+  undefined local_40 [33];
+  undefined local_1f [15];
+  int local_10;
+  
+  local_10 = *(int *)(in_GS_OFFSET + 0x14);
+  __stream = fopen("md5code","r");
+  if (__stream == (FILE *)0x0) {
+    puts("md5code file not exist!");
+  }
+  else {
+    do {
+      pcVar1 = fgets(local_a4,100,__stream);
+      if (pcVar1 == (char *)0x0) break;
+      __isoc99_sscanf(local_a4,"%[^\n]",local_1f);
+      fgets(local_a4,100,__stream);
+      __isoc99_sscanf(local_a4,"%[^ ]",local_40);
+      printf("%s,%s\n",local_1f,local_40);
+      iVar2 = FillMd5Code(local_1f,local_40);
+    } while (iVar2 != -1);
+  }
+  if (local_10 == *(int *)(in_GS_OFFSET + 0x14)) {
+    return;
+  }
+                    // WARNING: Subroutine does not return
+  __stack_chk_fail();
+}
+
+
+
+undefined4 main(void)
+
+{
+  SetUpdateItemsMd5();
+  return 0;
+}
+
+
+
+// WARNING: Function: __i686.get_pc_thunk.bx replaced with injection: get_pc_thunk_bx
+// WARNING: Removing unreachable block (ram,0x08048930)
+// WARNING: Removing unreachable block (ram,0x08048938)
+
+void __libc_csu_init(void)
+
+{
+  EVP_PKEY_CTX *in_stack_ffffffd4;
+  
+  _init(in_stack_ffffffd4);
+  return;
+}
+
+
+
+void __libc_csu_fini(void)
+
+{
+  return;
+}
+
+
+
+// WARNING: This is an inlined function
+
+void __i686_get_pc_thunk_bx(void)
+
+{
+  return;
+}
+
+
+
+void __do_global_ctors_aux(void)
+
+{
+  code *pcVar1;
+  code **ppcVar2;
+  
+  if (__CTOR_LIST__ != (code *)0xffffffff) {
+    ppcVar2 = &__CTOR_LIST__;
+    pcVar1 = __CTOR_LIST__;
+    do {
+      ppcVar2 = ppcVar2 + -1;
+      (*pcVar1)();
+      pcVar1 = *ppcVar2;
+    } while (pcVar1 != (code *)0xffffffff);
+  }
+  return;
+}
+
+
+
+void _fini(void)
+
+{
+  __do_global_dtors_aux();
+  return;
+}
+
+

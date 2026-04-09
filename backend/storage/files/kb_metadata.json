@@ -1,0 +1,91 @@
+{
+  "2b3117f8-8157-445c-89dd-983684e4b3bc": {
+    "id": "2b3117f8-8157-445c-89dd-983684e4b3bc",
+    "name": "测试知识库 - 已改名1",
+    "document_count": 0,
+    "total_chunks": 658,
+    "created_at": "2026-04-08T20:22:12.647301",
+    "updated_at": "2026-04-09T15:58:48.548087",
+    "documents": {
+      "e454a9b3": {
+        "doc_id": "e454a9b3",
+        "filename": "影像设备风险发现工具报告(3).docx",
+        "file_size": 43605,
+        "chunks_count": 1,
+        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "uploaded_at": "2026-04-08T21:00:23.597761",
+        "status": "completed",
+        "description": "1241"
+      },
+      "24e228ed": {
+        "doc_id": "24e228ed",
+        "filename": "Frontend_Design.md",
+        "file_size": 20514,
+        "chunks_count": 30,
+        "mime_type": "text/markdown",
+        "uploaded_at": "2026-04-09T15:55:35.473719",
+        "status": "completed",
+        "description": null
+      },
+      "814f0549": {
+        "doc_id": "814f0549",
+        "filename": "逆向.txt",
+        "file_size": 6458,
+        "chunks_count": 15,
+        "mime_type": "text/plain",
+        "uploaded_at": "2026-04-09T15:55:57.491932",
+        "status": "completed",
+        "description": null
+      },
+      "d8309d8b": {
+        "doc_id": "d8309d8b",
+        "filename": "PPHC.pdf",
+        "file_size": 22521649,
+        "chunks_count": 611,
+        "mime_type": "application/pdf",
+        "uploaded_at": "2026-04-09T15:56:15.611725",
+        "status": "completed",
+        "description": null
+      }
+    }
+  },
+  "287baf5d-2d79-479d-b94d-b9f4836b5b27": {
+    "id": "287baf5d-2d79-479d-b94d-b9f4836b5b27",
+    "name": "测试知识库2",
+    "document_count": 0,
+    "total_chunks": 8,
+    "created_at": "2026-04-08T20:48:35.532565",
+    "updated_at": "2026-04-09T10:59:59.699018",
+    "documents": {
+      "187c8b11": {
+        "doc_id": "187c8b11",
+        "filename": "网络安全检测平台原型设计.docx",
+        "file_size": 2242533,
+        "chunks_count": 6,
+        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "uploaded_at": "2026-04-09T10:53:12.096015",
+        "status": "completed",
+        "description": "22"
+      },
+      "e8637d88": {
+        "doc_id": "e8637d88",
+        "filename": "网络安全检测平台-修改建议.docx",
+        "file_size": 2064336,
+        "chunks_count": 1,
+        "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "uploaded_at": "2026-04-09T10:59:53.973638",
+        "status": "completed",
+        "description": null
+      }
+    }
+  },
+  "6e71edf2-9e9f-4047-86cb-daef5e3313d2": {
+    "id": "6e71edf2-9e9f-4047-86cb-daef5e3313d2",
+    "name": "测试知识库",
+    "document_count": 0,
+    "total_chunks": 0,
+    "created_at": "2026-04-09T09:11:06.149495",
+    "updated_at": "2026-04-09T09:11:06.149517",
+    "documents": {}
+  }
+}
