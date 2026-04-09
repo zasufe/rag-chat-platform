@@ -25,6 +25,10 @@ class LLMService:
         
         async with httpx.AsyncClient(timeout=60.0) as client:
             try:
+                print(f"LLM API 调用：{self.api_base}/chat/completions")
+                print(f"Model: {self.model}")
+                print(f"Messages: {len(messages)} 条")
+                
                 async with client.stream(
                     "POST",
                     f"{self.api_base}/chat/completions",
@@ -39,9 +43,12 @@ class LLMService:
                         **kwargs
                     }
                 ) as response:
+                    print(f"LLM 响应状态码：{response.status_code}")
+                    
                     if response.status_code != 200:
                         error_text = await response.aread()
-                        yield f"错误：API 调用失败 ({response.status_code})"
+                        print(f"LLM 错误响应：{error_text}")
+                        yield f"错误：API 调用失败 ({response.status_code}) {error_text.decode()[:200]}"
                         return
                     
                     async for line in response.aiter_lines():
