@@ -6,6 +6,8 @@ from functools import lru_cache
 
 # 获取项目根目录（backend 的父目录）
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# 获取 backend 目录（.env 所在目录）
+BACKEND_DIR = os.path.dirname(BASE_DIR)
 
 
 class Settings(BaseSettings):
@@ -51,7 +53,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-this-to-a-random-secret-key-in-production"
     
     class Config:
-        env_file = ".env"
+        # 使用绝对路径读取 .env 文件
+        env_file = os.path.join(BACKEND_DIR, ".env")
         env_file_encoding = "utf-8"
 
 
