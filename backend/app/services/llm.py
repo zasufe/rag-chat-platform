@@ -23,7 +23,11 @@ class LLMService:
             yield "错误：未配置 LLM API Key"
             return
         
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        # 强制使用 IPv4，避免 IPv6 问题
+        async with httpx.AsyncClient(
+            timeout=60.0,
+            limits=httpx.Limits(max_connections=100)
+        ) as client:
             try:
                 print(f"LLM API 调用：{self.api_base}/chat/completions")
                 print(f"Model: {self.model}")
