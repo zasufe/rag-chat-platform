@@ -1,27 +1,31 @@
+# RAG Chat Platform - Python 3.13+ 兼容版本
+# 基于当前实际运行版本 (已验证可启动)
+
 # Web Framework
-fastapi==0.109.0
-uvicorn[standard]==0.27.0
-python-multipart==0.0.6
-aiofiles==23.2.1
+fastapi==0.135.3
+uvicorn[standard]==0.44.0
+python-multipart==0.0.24
+aiofiles==25.1.0
 
 # Vector Database
-chromadb==0.4.22
+chromadb==1.5.6
 
 # Document Parsing
 PyPDF2==3.0.1
-python-docx==1.1.0
-unstructured==0.11.8
+python-docx==1.2.0
+# unstructured  # 可选，如需使用请单独安装
 
 # LLM & Embedding
-openai==1.10.0
-httpx==0.26.0
+openai==2.30.0
+httpx==0.28.1
+httpx-sse==0.4.3
+langchain-openai==1.1.12  # 可选
 
 # Utils
-pydantic==2.5.3
-pydantic-settings==2.1.0
-python-dotenv==1.0.0
-python-jose[cryptography]==3.3.0
-loguru==0.7.2
+pydantic==2.12.5
+pydantic-settings==2.13.1
+python-dotenv==1.2.2
+loguru==0.7.3
 
 # Async
-aiohttp==3.9.1
+aiohttp==3.13.5
