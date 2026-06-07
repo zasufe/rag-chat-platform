@@ -1,0 +1,75 @@
+# Local environment
+.env
+.env.*
+!.env.example
+*.local
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+nohup.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+
+# Node / frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm/
+.pnpm-store/
+
+# Frontend build output and caches
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+*.tsbuildinfo
+
+# Backend runtime data
+backend/storage/
+backend/app/storage/
+
+# Uploaded files, vector indexes, and local databases
+*.sqlite
+*.sqlite3
+*.db
+*.bin
+*.pickle
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
