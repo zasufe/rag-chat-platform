@@ -1,11 +1,7 @@
 """知识库管理路由"""
-from fastapi import APIRouter, HTTPException, BackgroundTasks
-from typing import List
+from fastapi import APIRouter, HTTPException
 import uuid
-import os
-import json
 from datetime import datetime
-import aiofiles
 
 from app.models.schemas import (
     KnowledgeBaseCreate,
@@ -16,30 +12,13 @@ from app.models.schemas import (
 )
 from app.services.vector_store import get_vector_store
 from app.services.document import get_document_service
-from app.core.config import settings
+from app.services.metadata_store import MetadataStoreError, metadata_store
 
 router = APIRouter(prefix="/api/kb", tags=["知识库管理"])
 
-# 元数据存储路径
-METADATA_FILE = os.path.join(settings.STORAGE_DIR, "kb_metadata.json")
 
-
-async def load_metadata() -> dict:
-    """加载元数据"""
-    if os.path.exists(METADATA_FILE):
-        try:
-            async with aiofiles.open(METADATA_FILE, "r", encoding="utf-8") as f:
-                return json.loads(await f.read())
-        except:
-            return {}
-    return {}
-
-
-async def save_metadata(data: dict):
-    """保存元数据"""
-    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
-    async with aiofiles.open(METADATA_FILE, "w", encoding="utf-8") as f:
-        await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+def raise_metadata_error(e: MetadataStoreError):
+    raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("", response_model=ApiResponse)
@@ -53,18 +32,23 @@ async def create_knowledge_base(request: KnowledgeBaseCreate):
     if not success:
         raise HTTPException(status_code=500, detail="创建向量库失败")
     
-    # 保存元数据
-    metadata = await load_metadata()
-    metadata[kb_id] = {
-        "id": kb_id,
-        "name": request.name,
-        "document_count": 0,
-        "total_chunks": 0,
-        "created_at": datetime.now().isoformat(),
-        "updated_at": datetime.now().isoformat(),
-        "documents": {}
-    }
-    await save_metadata(metadata)
+    try:
+        def add_kb(metadata: dict):
+            now = datetime.now().isoformat()
+            metadata[kb_id] = {
+                "id": kb_id,
+                "name": request.name,
+                "document_count": 0,
+                "total_chunks": 0,
+                "created_at": now,
+                "updated_at": now,
+                "documents": {}
+            }
+
+        await metadata_store.update(add_kb)
+    except MetadataStoreError as e:
+        await vector_store.delete_collection(kb_id)
+        raise_metadata_error(e)
     
     return ApiResponse(
         code=0,
@@ -76,7 +60,11 @@ async def create_knowledge_base(request: KnowledgeBaseCreate):
 @router.get("", response_model=KnowledgeBaseListResponse)
 async def list_knowledge_bases():
     """获取知识库列表"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
+
     vector_store = get_vector_store()
     
     items = []
@@ -99,7 +87,10 @@ async def list_knowledge_bases():
 @router.get("/{kb_id}", response_model=ApiResponse)
 async def get_knowledge_base(kb_id: str):
     """获取知识库详情"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
@@ -124,14 +115,16 @@ async def get_knowledge_base(kb_id: str):
 @router.put("/{kb_id}", response_model=ApiResponse)
 async def update_knowledge_base(kb_id: str, request: KnowledgeBaseUpdate):
     """更新知识库"""
-    metadata = await load_metadata()
-    
-    if kb_id not in metadata:
-        raise HTTPException(status_code=404, detail="知识库不存在")
-    
-    metadata[kb_id]["name"] = request.name
-    metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-    await save_metadata(metadata)
+    try:
+        def update_name(metadata: dict):
+            if kb_id not in metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            metadata[kb_id]["name"] = request.name
+            metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(update_name)
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     return ApiResponse(code=0, message="更新成功")
 
@@ -139,8 +132,11 @@ async def update_knowledge_base(kb_id: str, request: KnowledgeBaseUpdate):
 @router.delete("/{kb_id}", response_model=ApiResponse)
 async def delete_knowledge_base(kb_id: str):
     """删除知识库（级联删除）"""
-    metadata = await load_metadata()
-    
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
+
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
     
@@ -153,9 +149,15 @@ async def delete_knowledge_base(kb_id: str):
     # 删除本地文件
     await document_service.delete_kb_files(kb_id)
     
-    # 删除元数据
-    del metadata[kb_id]
-    await save_metadata(metadata)
+    try:
+        def remove_kb(current_metadata: dict):
+            if kb_id not in current_metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            del current_metadata[kb_id]
+
+        await metadata_store.update(remove_kb)
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     return ApiResponse(code=0, message="删除成功")
 
@@ -163,7 +165,10 @@ async def delete_knowledge_base(kb_id: str):
 @router.post("/{kb_id}/search", response_model=ApiResponse)
 async def search_knowledge_base(kb_id: str, query: dict):
     """知识库检索"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")

@@ -4,36 +4,33 @@ from fastapi.responses import FileResponse
 from typing import Optional
 import uuid
 import os
-import json
 from datetime import datetime
-import aiofiles
 
-from app.models.schemas import ApiResponse, DocumentListItem
+from app.models.schemas import ApiResponse
 from app.services.vector_store import get_vector_store
 from app.services.document import get_document_service
 from app.core.config import settings
+from app.services.metadata_store import MetadataStoreError, metadata_store
 
 router = APIRouter(prefix="/api/kb", tags=["文档管理"])
 
-METADATA_FILE = os.path.join(settings.STORAGE_DIR, "kb_metadata.json")
+
+def raise_metadata_error(e: MetadataStoreError):
+    raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-async def load_metadata() -> dict:
-    """加载元数据"""
-    if os.path.exists(METADATA_FILE):
-        try:
-            async with aiofiles.open(METADATA_FILE, "r", encoding="utf-8") as f:
-                return json.loads(await f.read())
-        except:
-            return {}
-    return {}
+async def mark_document_failed(kb_id: str, doc_id: str, error_msg: str):
+    """后台任务失败时更新文档状态。"""
+    try:
+        def update_status(metadata: dict):
+            if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
+                metadata[kb_id]["documents"][doc_id]["status"] = "failed"
+                metadata[kb_id]["documents"][doc_id]["error_msg"] = error_msg
+                metadata[kb_id]["updated_at"] = datetime.now().isoformat()
 
-
-async def save_metadata(data: dict):
-    """保存元数据"""
-    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
-    async with aiofiles.open(METADATA_FILE, "w", encoding="utf-8") as f:
-        await f.write(json.dumps(data, ensure_ascii=False, indent=2))
+        await metadata_store.update(update_status)
+    except MetadataStoreError as e:
+        print(f"更新文档失败状态失败: {e}")
 
 
 async def process_document_task(
@@ -53,23 +50,14 @@ async def process_document_task(
         text = await document_service.parse_file(file_path)
         
         if not text:
-            # 更新状态为失败
-            metadata = await load_metadata()
-            if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
-                metadata[kb_id]["documents"][doc_id]["status"] = "failed"
-                metadata[kb_id]["documents"][doc_id]["error_msg"] = "文档解析失败"
-                await save_metadata(metadata)
+            await mark_document_failed(kb_id, doc_id, "文档解析失败")
             return
         
         # 2. 分块
         chunks = document_service.chunk_text(text, chunk_size, overlap)
         
         if not chunks:
-            metadata = await load_metadata()
-            if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
-                metadata[kb_id]["documents"][doc_id]["status"] = "failed"
-                metadata[kb_id]["documents"][doc_id]["error_msg"] = "文档分块失败"
-                await save_metadata(metadata)
+            await mark_document_failed(kb_id, doc_id, "文档分块失败")
             return
         
         # 3. 向量化入库
@@ -77,25 +65,21 @@ async def process_document_task(
         count = await vector_store.add_documents(kb_id, doc_id, chunks, metadatas)
         
         # 4. 更新元数据
-        metadata = await load_metadata()
-        if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
-            metadata[kb_id]["documents"][doc_id]["status"] = "completed"
-            metadata[kb_id]["documents"][doc_id]["chunks_count"] = count
-            metadata[kb_id]["total_chunks"] = sum(
-                doc.get("chunks_count", 0) 
-                for doc in metadata[kb_id].get("documents", {}).values()
-            )
-            metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-            await save_metadata(metadata)
+        def complete_document(metadata: dict):
+            if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
+                metadata[kb_id]["documents"][doc_id]["status"] = "completed"
+                metadata[kb_id]["documents"][doc_id]["chunks_count"] = count
+                metadata[kb_id]["total_chunks"] = sum(
+                    doc.get("chunks_count", 0)
+                    for doc in metadata[kb_id].get("documents", {}).values()
+                )
+                metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(complete_document)
             
     except Exception as e:
-        # 更新状态为失败
         print(f"文档处理失败: {e}")
-        metadata = await load_metadata()
-        if kb_id in metadata and doc_id in metadata[kb_id].get("documents", {}):
-            metadata[kb_id]["documents"][doc_id]["status"] = "failed"
-            metadata[kb_id]["documents"][doc_id]["error_msg"] = str(e)
-            await save_metadata(metadata)
+        await mark_document_failed(kb_id, doc_id, str(e))
 
 
 @router.post("/{kb_id}/docs/upload", response_model=ApiResponse)
@@ -108,8 +92,11 @@ async def upload_document(
     description: Optional[str] = Form(None)
 ):
     """上传文档"""
-    metadata = await load_metadata()
-    
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
+
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
     
@@ -130,22 +117,30 @@ async def upload_document(
     document_service = get_document_service()
     file_path = await document_service.save_file(kb_id, doc_id, file.filename, content)
     
-    # 记录元数据
-    if "documents" not in metadata[kb_id]:
-        metadata[kb_id]["documents"] = {}
-    
-    metadata[kb_id]["documents"][doc_id] = {
-        "doc_id": doc_id,
-        "filename": file.filename,
-        "file_size": len(content),
-        "chunks_count": 0,
-        "mime_type": document_service.get_mime_type(file.filename),
-        "uploaded_at": datetime.now().isoformat(),
-        "status": "processing",
-        "description": description
-    }
-    metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-    await save_metadata(metadata)
+    try:
+        def add_document(metadata: dict):
+            if kb_id not in metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            metadata[kb_id].setdefault("documents", {})
+            metadata[kb_id]["documents"][doc_id] = {
+                "doc_id": doc_id,
+                "filename": file.filename,
+                "file_size": len(content),
+                "chunks_count": 0,
+                "mime_type": document_service.get_mime_type(file.filename),
+                "uploaded_at": datetime.now().isoformat(),
+                "status": "processing",
+                "description": description
+            }
+            metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(add_document)
+    except MetadataStoreError as e:
+        await document_service.delete_file(kb_id, doc_id, file.filename)
+        raise_metadata_error(e)
+    except HTTPException:
+        await document_service.delete_file(kb_id, doc_id, file.filename)
+        raise
     
     # 后台处理文档
     background_tasks.add_task(
@@ -174,13 +169,17 @@ async def upload_document(
 @router.get("/{kb_id}/docs", response_model=ApiResponse)
 async def list_documents(kb_id: str, page: int = 1, size: int = 20):
     """获取文档列表"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
     
     documents = metadata[kb_id].get("documents", {})
     items = list(documents.values())
+    items.sort(key=lambda item: item.get("uploaded_at", ""), reverse=True)
     
     # 分页
     total = len(items)
@@ -200,7 +199,10 @@ async def list_documents(kb_id: str, page: int = 1, size: int = 20):
 @router.delete("/{kb_id}/docs/{doc_id}", response_model=ApiResponse)
 async def delete_document(kb_id: str, doc_id: str):
     """删除文档"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
@@ -218,10 +220,18 @@ async def delete_document(kb_id: str, doc_id: str):
     document_service = get_document_service()
     await document_service.delete_file(kb_id, doc_id, doc_info["filename"])
     
-    # 更新元数据
-    del metadata[kb_id]["documents"][doc_id]
-    metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-    await save_metadata(metadata)
+    try:
+        def remove_document(current_metadata: dict):
+            if kb_id not in current_metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            if doc_id not in current_metadata[kb_id].get("documents", {}):
+                raise HTTPException(status_code=404, detail="文档不存在")
+            del current_metadata[kb_id]["documents"][doc_id]
+            current_metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(remove_document)
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     return ApiResponse(code=0, message="删除成功")
 
@@ -229,7 +239,10 @@ async def delete_document(kb_id: str, doc_id: str):
 @router.get("/{kb_id}/docs/{doc_id}/download")
 async def download_document(kb_id: str, doc_id: str):
     """下载原始文件"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
@@ -255,7 +268,10 @@ async def download_document(kb_id: str, doc_id: str):
 @router.get("/{kb_id}/docs/{doc_id}/preview", response_model=ApiResponse)
 async def preview_document(kb_id: str, doc_id: str):
     """预览文档"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
@@ -303,19 +319,19 @@ async def preview_document(kb_id: str, doc_id: str):
 @router.put("/{kb_id}/docs/{doc_id}", response_model=ApiResponse)
 async def update_document(kb_id: str, doc_id: str, request: dict):
     """更新文档信息（描述）"""
-    metadata = await load_metadata()
-    
-    if kb_id not in metadata:
-        raise HTTPException(status_code=404, detail="知识库不存在")
-    
-    if doc_id not in metadata[kb_id].get("documents", {}):
-        raise HTTPException(status_code=404, detail="文档不存在")
-    
-    # 更新描述
-    if "description" in request:
-        metadata[kb_id]["documents"][doc_id]["description"] = request["description"]
-        metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-        await save_metadata(metadata)
+    try:
+        def update_description(metadata: dict):
+            if kb_id not in metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            if doc_id not in metadata[kb_id].get("documents", {}):
+                raise HTTPException(status_code=404, detail="文档不存在")
+            if "description" in request:
+                metadata[kb_id]["documents"][doc_id]["description"] = request["description"]
+                metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(update_description)
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     return ApiResponse(code=0, message="更新成功")
 
@@ -331,7 +347,10 @@ async def reupload_document(
     description: Optional[str] = Form(None)
 ):
     """重新上传文档"""
-    metadata = await load_metadata()
+    try:
+        metadata = await metadata_store.load()
+    except MetadataStoreError as e:
+        raise_metadata_error(e)
     
     if kb_id not in metadata:
         raise HTTPException(status_code=404, detail="知识库不存在")
@@ -364,19 +383,31 @@ async def reupload_document(
     # 保存新文件
     file_path = await document_service.save_file(kb_id, doc_id, file.filename, content)
     
-    # 更新元数据
-    metadata[kb_id]["documents"][doc_id] = {
-        "doc_id": doc_id,
-        "filename": file.filename,
-        "file_size": len(content),
-        "chunks_count": 0,
-        "mime_type": document_service.get_mime_type(file.filename),
-        "uploaded_at": datetime.now().isoformat(),
-        "status": "processing",
-        "description": description or old_doc.get("description")
-    }
-    metadata[kb_id]["updated_at"] = datetime.now().isoformat()
-    await save_metadata(metadata)
+    try:
+        def replace_document(metadata: dict):
+            if kb_id not in metadata:
+                raise HTTPException(status_code=404, detail="知识库不存在")
+            if doc_id not in metadata[kb_id].get("documents", {}):
+                raise HTTPException(status_code=404, detail="文档不存在")
+            metadata[kb_id]["documents"][doc_id] = {
+                "doc_id": doc_id,
+                "filename": file.filename,
+                "file_size": len(content),
+                "chunks_count": 0,
+                "mime_type": document_service.get_mime_type(file.filename),
+                "uploaded_at": datetime.now().isoformat(),
+                "status": "processing",
+                "description": description or old_doc.get("description")
+            }
+            metadata[kb_id]["updated_at"] = datetime.now().isoformat()
+
+        await metadata_store.update(replace_document)
+    except MetadataStoreError as e:
+        await document_service.delete_file(kb_id, doc_id, file.filename)
+        raise_metadata_error(e)
+    except HTTPException:
+        await document_service.delete_file(kb_id, doc_id, file.filename)
+        raise
     
     # 后台处理文档
     background_tasks.add_task(
